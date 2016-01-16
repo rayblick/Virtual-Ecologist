@@ -47,38 +47,43 @@ import numpy as np
 import math
 from scipy import stats
 import matplotlib.pyplot as plt
+from prettytable import PrettyTable
+
 
 class VirtualEcologist:
     """
     A class of methods to reduce the number of plots along transect lines.
     """
-
     def __init__(self, pilot_data, full_data):
         self.pilot_data = pilot_data # input file 1
         self.full_data = full_data # input file 2
         self.mse_output = {} # built with train_observer
         self.dataset = {} # built with match_full_dataset
 
-#=============================================================================
+
+    def print_table(self, data_dictionary):
+        """
+        Prints a data_dictionary in table form.
+        """
+        # number to iterate over lifeforms in the table
+        iteration = 0
+        # header
+        t = PrettyTable(['ID', 'Life form', 'MSE', 'Pilot data'])
+        # loop over data_dictionary
+        for group in data_dictionary:
+            # look in dictionary created by train_observer
+            if group in self.fg_dict:
+                pilot_data =  'yes'
+            else:
+                pilot_data = 'no'
+            # increase ID counter
+            iteration += 1
+            # add each row to be printed
+            t.add_row([iteration, group, round(data_dictionary[group], 3), pilot_data])
+        # print to console
+        print(t.get_string(sortby = "ID"))
 
 
-        # PRINT FUNCTION
-        ## Provide an output describing import attributes of the dataset
-        #print("Data loaded successfully. ", "There are {0} functional groups in your data.".format(number_of_groups))
-        #print("\nThe functional groups include:")
-
-        #iteration = 0
-        #t = PrettyTable(['Number','Functional group', 'Count'])
-        #for group in counts:
-        #    iteration += 1
-        #    t.add_row([iteration, group, counts[group]])
-
-        #print(t.get_string(sortby="Number"))
-        #print('')
-
-        #
-
-#==============================================================================
     def train_observer(self):
         """
         Returns a dictionary containing Mean Square Error of estimates.
@@ -102,7 +107,7 @@ class VirtualEcologist:
         TypeError: coercing to Unicode: need string or buffer, int found
         """
         # store count of functional groups
-        fg_dict = dict()
+        self.fg_dict = dict()
 
         with open(self.pilot_data, 'r') as f:
             file_reader = csv.reader(f)
@@ -114,10 +119,10 @@ class VirtualEcologist:
                 fg_key = row[2]
 
                 # record the number of entries to the dictionary
-                if fg_key not in fg_dict:
-                    fg_dict[fg_key] = 1
+                if fg_key not in self.fg_dict:
+                    self.fg_dict[fg_key] = 1
                 else:
-                    fg_dict[fg_key] += 1
+                    self.fg_dict[fg_key] += 1
 
                 # Calculate square difference between observers
                 square_difference = (float(est_one) - float(est_two)) ** 2
@@ -128,8 +133,8 @@ class VirtualEcologist:
             # Calculate mean of error between observers
             # divide one dictionary by another
             for entry in self.mse_output:
-                if entry in fg_dict:
-                    self.mse_output[entry] = self.mse_output.get(entry, 0) / fg_dict[entry]
+                if entry in self.fg_dict:
+                    self.mse_output[entry] = self.mse_output.get(entry, 0) / self.fg_dict[entry]
 
             # returns a dictionary of MSE
             return self.mse_output
@@ -473,4 +478,5 @@ if __name__ == "__main__":
     test = VirtualEcologist("ve_testdata.csv", "ve_fulldataset.csv")
     test.train_observer()
     test.match_full_dataset()
-    test.calc_mmd(site = "swamp", lifeform = "tree")
+    test.print_table(test.mse_output)
+    test.calc_mmd(site = "swamp", lifeform = "herb")
