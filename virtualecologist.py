@@ -48,6 +48,8 @@ import math
 from scipy import stats
 import matplotlib.pyplot as plt
 from prettytable import PrettyTable
+from itertools import cycle, islice
+import re
 
 class VirtualEcologist:
     """
@@ -67,7 +69,7 @@ class VirtualEcologist:
         # number to iterate over lifeforms in the table
         iteration = 0
         # header
-        t = PrettyTable(['ID', 'Life form', 'MSE', 'Pilot data'])
+        t = PrettyTable(['ID', 'Lifeform', 'MSE', 'Pilot data'])
         # loop over data_dictionary
         for group in data_dictionary:
             # look in dictionary created by train_observer
@@ -194,6 +196,110 @@ class VirtualEcologist:
                 for item in list_of_groups:
                     if item not in self.mse_output:
                         self.mse_output[item] = dictionary_value / dictionary_iteration
+
+
+    def create_barchart(self, lifeforms=None):
+        """
+        Returns a bar chart for lifeforms across all sites.
+        """
+        # place holder list
+        sites = [] # wetland =====> sites
+
+        # seperate lifeforms by comma
+        if lifeforms != None:
+            dropped_groups = lifeforms.split(',') #
+        else:
+            # give an empty list
+            dropped_groups = []
+
+        # Group by sites
+        sites_by_group = dict(list(self.dataset.groupby(['site'])))
+        # populate reduced dataframe with location, lifeform and count
+        for location in sites_by_group: #FG_subset =====> site_by_group
+            # dictionary to hold the count of each lifeform
+            site_dictionary = {} # wetland_dictionary =====> site_dictionary
+
+            # count frequency of lifeform in each location
+            for row in sites_by_group[location]['lifeform']:
+                if row not in site_dictionary:
+                    site_dictionary[row] = 1
+                else:
+                    site_dictionary[row] += 1
+
+            # make a list of location, lifeform (i) and count (j)
+            for i, j in site_dictionary.items():
+                put_data_together = location, i, j
+                sites.append(put_data_together)
+
+        # convert sites list to pandas dataframe
+        data = pd.DataFrame(sites, columns=list(["site", "lifeform", "count"]))
+
+        # Drop the lifeforms listed in function arguements
+        data = data[~data.lifeform.isin(dropped_groups)]
+
+        # modify the data structure for plotting and replace NaNs with zero
+        df_data = data.groupby(['site', 'lifeform']).aggregate(sum).unstack()
+        df_data.fillna(0, inplace=True)
+
+        # convert entries into percentiles
+        percentiles = df_data.apply(lambda c: c / c.sum() * 100, axis=1)
+
+        # specify colours
+        my_colors = ['DarkKhaki','Khaki','PaleGoldenrod','LightGoldenrodYellow','white','grey','darkgrey']
+
+        # plot barchart
+        ax = percentiles.plot(kind='bar', stacked=True, color=my_colors, ylim=(0,100))
+
+        # this section modifies the labels for the barchart
+        h, l = ax.get_legend_handles_labels()
+        labels = []
+        for i in l:
+            i= re.sub(r'\W', '', i.split(',')[1])
+            labels.append(i)
+
+        ax.legend(h, labels, loc='center left', bbox_to_anchor=(1, 0.5),prop={'size': 8})
+        ax.set_position([0.1, 0.6, 0.6, 0.35])
+        ax.grid('off')
+        fig = ax.get_figure()
+
+        # save the figure
+        fig.savefig('lifeforms_barchart.png', format='png', dpi=1000)
+
+
+    def create_pdf_figure(self):
+        """
+        Prints a table containing the group name and sigma that
+        will define the PseudoObserver model
+        """
+        # loop through populated data dictionary
+        for group in self.mse_output:
+            #
+            x = np.random.normal(50, math.sqrt(self.mse_output[group]), 1000)
+            count, bins, ignored = plt.hist(x, 30, range=[0,100], normed=True, color="White")
+
+            # build plot parameters
+            # plot prob curve
+            plt.plot(bins, 1/(math.sqrt(self.mse_output[group]) * np.sqrt(2 * np.pi)) \
+            * np.exp( - (bins - 50)**2 / (2 * math.sqrt(self.mse_output[group])**2)), \
+            linewidth=2, color='Black')
+
+            # add text in top left corner
+            plt.text(5, 0.09, group + ' [' + str(round(np.sqrt(self.mse_output[group]), \
+            2)) + ']', size=16)
+
+            # set axis scale and labels
+            plt.ylim((0,0.1))
+            plt.xlim((0,100))
+            plt.ylabel("Probability of cover estimate", size=14)
+            plt.xlabel("Percentage cover estimate for a single species (0-100)", size=14)
+            plt.plot([50, 50], [0, 0.1], 'Grey', lw=2, linestyle = '--')
+
+            # set figure name and save
+            name = group
+            name = re.sub('/', '_', name)
+            plt.savefig(name + '.png', format='png', dpi=1000)
+            #plt.show()
+            plt.clf()
 
 
     def calc_mmd(self, site, lifeform, trigger=10,
@@ -477,4 +583,6 @@ if __name__ == "__main__":
     test.train_observer()
     test.match_full_dataset()
     test.print_table(test.mse_output)
-    test.calc_mmd(site="swamp", lifeform="herb")
+    #test.calc_mmd(site="swamp", lifeform="herb")
+    #test.create_barchart()
+    #test.create_pdf_figure()
