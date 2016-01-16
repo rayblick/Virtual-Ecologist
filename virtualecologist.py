@@ -49,7 +49,6 @@ from scipy import stats
 import matplotlib.pyplot as plt
 from prettytable import PrettyTable
 
-
 class VirtualEcologist:
     """
     A class of methods to reduce the number of plots along transect lines.
@@ -57,8 +56,8 @@ class VirtualEcologist:
     def __init__(self, pilot_data, full_data):
         self.pilot_data = pilot_data # input file 1
         self.full_data = full_data # input file 2
-        self.mse_output = {} # built with train_observer
-        self.dataset = {} # built with match_full_dataset
+        self.mse_output = {} # will hold MSE according to pilot_data and full_data
+        self.dataset = {} # Makes the full dataset available in the workspace
 
 
     def print_table(self, data_dictionary):
@@ -73,7 +72,7 @@ class VirtualEcologist:
         for group in data_dictionary:
             # look in dictionary created by train_observer
             if group in self.fg_dict:
-                pilot_data =  'yes'
+                pilot_data = 'yes'
             else:
                 pilot_data = 'no'
             # increase ID counter
@@ -81,7 +80,7 @@ class VirtualEcologist:
             # add each row to be printed
             t.add_row([iteration, group, round(data_dictionary[group], 3), pilot_data])
         # print to console
-        print(t.get_string(sortby = "ID"))
+        print t.get_string(sortby="ID")
 
 
     def train_observer(self):
@@ -125,7 +124,7 @@ class VirtualEcologist:
                     self.fg_dict[fg_key] += 1
 
                 # Calculate square difference between observers
-                square_difference = (float(est_one) - float(est_two)) ** 2
+                square_difference = (float(est_one) - float(est_two))**2
 
                 # add to global dictionary
                 self.mse_output[fg_key] = self.mse_output.get(fg_key, 0) + square_difference
@@ -197,8 +196,8 @@ class VirtualEcologist:
                         self.mse_output[item] = dictionary_value / dictionary_iteration
 
 
-    def calc_mmd(self, site, lifeform, trigger = 10,
-        iterations = 100, min_plot = 4, figure = True):
+    def calc_mmd(self, site, lifeform, trigger=10,
+        iterations=100, min_plot=4, figure=True):
         """
         Returns number of plots to reduce per transect. Takes two
         arguments; site name (e.g. shrubswamp) and lifeform (e.g. shrub).
@@ -264,7 +263,7 @@ class VirtualEcologist:
             find_longest_transect = len(temp_data_holder['plot'].unique())
 
             # subset data to evaluate each transect
-            subset_data = dict(list(temp_data_holder.groupby(['site','transect'])))
+            subset_data = dict(list(temp_data_holder.groupby(['site', 'transect'])))
 
             # Track plot reductions
             plot_iterator = 0
@@ -303,7 +302,7 @@ class VirtualEcologist:
 
                 # extract functional group from the data AFTER transects are reduced
                 lifeform_data = (reduced_transect[reduced_transect['lifeform'].str.contains(self.lifeform)])
-                lifeform_data = dict(list(lifeform_data.groupby(['site','transect','lifeform'])))
+                lifeform_data = dict(list(lifeform_data.groupby(['site', 'transect', 'lifeform'])))
 
                 # place holder for the next for loop
                 group_data_array = []
@@ -329,12 +328,12 @@ class VirtualEcologist:
                     group_data_array.append(output)
 
                 # convert the list of lists to a Pandas DataFrame
-                result = pd.DataFrame(group_data_array, columns = list(["site", \
+                result = pd.DataFrame(group_data_array, columns=list(["site", \
                 "transect", "lifeform", "cover", "virtual", "occupancy"]))
-                result.sort(['site', 'transect', 'lifeform'], ascending = True, inplace = True)
+                result.sort(['site', 'transect', 'lifeform'], ascending=True, inplace=True)
 
                 # subset data to calc MMD
-                mmd_subset = dict(list(result.groupby(['site','lifeform'])))
+                mmd_subset = dict(list(result.groupby(['site', 'lifeform'])))
 
                 # calculate t-test (2 tailed)
                 for subset in mmd_subset:
@@ -382,13 +381,13 @@ class VirtualEcologist:
         """
 
         # import data
-        mdc_dataframe = pd.DataFrame(self.plot_data, columns = list(["dropped_plots", \
+        mdc_dataframe = pd.DataFrame(self.plot_data, columns=list(["dropped_plots", \
         "site", "lifeform", "mdc", "n", "occupancy"]))
 
         # get trigger level data
         if self.trigger_points != []:
             # trigger points
-            trigger_dataframe = pd.DataFrame(self.trigger_points, columns = list(["loop", \
+            trigger_dataframe = pd.DataFrame(self.trigger_points, columns=list(["loop", \
             "dropped_plots", "mdc", "occupancy", "n"]))
 
             # mean trigger value
@@ -431,13 +430,13 @@ per transect was less than: {0}".format(round(mean_occupancy, 2)))
             set_y_axis_limits = max(mdc_mean_output) + max(mdc_se_output) + 10
 
         # plot error bars representing Minimum detectable difference
-        plt.errorbar(mdc_x, mdc_mean_output, yerr = mdc_se_output, color='black', \
-            lw = 1.5, linestyle = '-', label = "MDD - 95% CI")
+        plt.errorbar(mdc_x, mdc_mean_output, yerr=mdc_se_output, color='black', \
+            lw=1.5, linestyle='-', label="MDD - 95% CI")
             # 95% confidence interval
 
         # add a horizontal line representing the trigger value
         plt.plot([0, max(mdc_x)], [int(self.trigger),int(self.trigger)], \
-            color = 'grey', lw = 2, linestyle = ':')
+            color='grey', lw=2, linestyle=':')
 
         # set x and y axis
         plt.ylim(0, set_y_axis_limits)
@@ -450,26 +449,25 @@ per transect was less than: {0}".format(round(mean_occupancy, 2)))
         plt.title(self.site + ' [' + self.lifeform + ' | ' + str(mdc_n_transects) + ' transects]')
 
         # add number of plots that are occupied
-        plt.plot(mdc_x, mdc_po_output, label = "plot occupancy", \
-            color = 'grey', lw = 1, linestyle = '--')
+        plt.plot(mdc_x, mdc_po_output, label="plot occupancy", \
+            color='grey', lw=1, linestyle='--')
 
         # plot a vertical line representing optimal replication
         plt.plot([mean_trigger_point, mean_trigger_point], [0, set_y_axis_limits], \
-            color = 'grey', lw = 1, linestyle = '-')
+            color='grey', lw=1, linestyle='-')
 
         # add text for optimal replication
         if mean_trigger_point != 0:
             plt.text(mean_trigger_point + 0.1, max(mdc_mean_output) + max(mdc_se_output), \
-                round(mean_trigger_point, 2), size = 16)
+                round(mean_trigger_point, 2), size=16)
 
         # uncomment to add x and y labels
-        plt.ylabel("Minimum detectable difference (%)",size = 14)
-        plt.xlabel("Number of plots dropped from each transect",size = 14)
+        plt.ylabel("Minimum detectable difference (%)", size=14)
+        plt.xlabel("Number of plots dropped from each transect", size=14)
 
         # save figure
         plt.savefig('MDD_' +  self.site + '_' + self.lifeform + '.png', format='png', dpi=1000)
         #plt.show()
-
 
 
 if __name__ == "__main__":
@@ -479,4 +477,4 @@ if __name__ == "__main__":
     test.train_observer()
     test.match_full_dataset()
     test.print_table(test.mse_output)
-    test.calc_mmd(site = "swamp", lifeform = "herb")
+    test.calc_mmd(site="swamp", lifeform="herb")
