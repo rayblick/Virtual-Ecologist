@@ -59,8 +59,6 @@ class VirtualEcologist:
         self.mse_output = {} # built with train_observer
         self.dataset = {} # built with match_full_dataset
 
-
-
 #=============================================================================
 
 
@@ -81,7 +79,6 @@ class VirtualEcologist:
         #
 
 #==============================================================================
-
     def train_observer(self):
         """
         Returns a dictionary containing Mean Square Error of estimates.
@@ -388,9 +385,11 @@ class VirtualEcologist:
             # trigger points
             trigger_dataframe = pd.DataFrame(self.trigger_points, columns = list(["loop", \
             "dropped_plots", "mdc", "occupancy", "n"]))
+
             # mean trigger value
             # min used for list ordering
             mean_trigger_point = np.mean(list(trigger_dataframe.groupby('loop')['dropped_plots'].min()))
+
             # mean maximum plot occupancy
             # max used for list ordering
             mean_occupancy = np.mean(list(trigger_dataframe.groupby('loop')['occupancy'].max()))
