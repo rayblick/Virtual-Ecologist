@@ -16,11 +16,11 @@ detectable difference as plots are reduced from each transect.
 
 2) Full dataset: A csv file collected by one observer WITH header.
     5 columns:
-    Wetland name (header title: Wetland)
-    Functional group name (header title: FuncGroup) <= names should be in file1
-    Transect identity (header title: Transect_ID)
-    Plot identity (header title: Plot_ID)
-    Percentage cover estimate (header title: Cover) <= units should match file1
+    Site name (header title: site)
+    Functional group name (header title: lifeform) <= entries same as file1
+    Transect identity (header title: transect)
+    Plot identity (header title: plot)
+    Percentage cover estimate (header title: cover) <= units should match file1
 
 --- The virtual ecologist ---
 File one is used to train the virtual ecologist. If no training data is
@@ -43,8 +43,10 @@ Author: Ray Blick
 # import modules
 import csv
 import pandas as pd
-
-# global variable
+import numpy as np
+import math
+from scipy import stats
+import matplotlib.pyplot as plt
 
 class VirtualEcologist:
     """
@@ -55,7 +57,7 @@ class VirtualEcologist:
         self.pilot_data = pilot_data # input file 1
         self.full_data = full_data # input file 2
         self.mse_output = {} # built with train_observer
-        self.data_output = {} # built with describe_dataset
+        self.dataset = {} # built with match_full_dataset
 
 
     def train_observer(self):
@@ -129,7 +131,7 @@ class VirtualEcologist:
         self.dataset = pd.read_csv(self.full_data)
 
         # count the frequency each functional group occurs in the full dataset
-        for row in self.dataset['FuncGroup']:
+        for row in self.dataset['lifeform']:
             if row not in count_dict:
                 count_dict[row] = 1
             else:
@@ -171,315 +173,262 @@ class VirtualEcologist:
                         self.mse_output[item] = dictionary_value / dictionary_iteration
 
 
-    def calc_mmd(self, wetland,  ):
+    def calc_mmd(self, site, lifeform, trigger=10, iterations=100, min_plot=4):
         """
-        The bootstrap process is designed to analyse one location (multiple transects) and
-        one functional group designated by the user input. The process runs 100 iterations
-        of the same process to find the mean and sd for differences between the observer
-        and the virtual ecologist (The PseudoObserver).
+        Returns t-test results, plotting data and trigger point data. Takes two
+        arguments site (e.g. shrubswamp) and lifeform (e.g. shrub). Three default
+        values are added, 1) a 10% trigger value, 2) 100 iterations, and 3)
+        a minimum plot reduction to 4 per transect. These can be altered by the
+        user.
         """
-
         # plotting variables
-        ResultsArray=[]
-        MDCarray=[]
-        TriggerValuesArray=[]
+        self.ttest_results = [] # ResultsArray =================> ttest_results
+        self.plot_data = [] # MDCarray ===================> self.plot_data
+        self.trigger_points = [] #TriggerValuesArray =====> self.trigger_points
+        #pulled_in_the_data = PseudoObserver.data ========> self.dataset
+        counter = 0             #global_iterator=0   =====> counter = 0
+        #number_of_loops = 1000  =========================> iterations
 
-        list_wetlands = list(np.unique(PseudoObserver.data['Wetland']))
-        print('List of selectable wetlands:')
-        print(list_wetlands)
-
-        # USER INPUT
-        wetland_name = input("Enter a wetland name (Currently defaults to WC): ")
-        if len(wetland_name) < 1: wetland_name = 'West Carne'
-        print(" ")
-
-        # base on user input find the unique functional groups that can be assessed
-        possible_functional_groups = (PseudoObserver.data[PseudoObserver.data['Wetland'].str.contains(wetland_name)])
-        print(possible_functional_groups['FuncGroup'].unique())
-
-        # USER INPUT
-        functional_group_name = input("Enter a functional group (Defaults to Tdr): ")
-        if len(functional_group_name) < 1: functional_group_name = 'Tdr'
-
-        print("Enter a trigger value for the wetland/functional group")
-        Trigger_value= input("What you enter will be plotted as a horizontal line in the figure: ")
-
-        pulled_in_the_data = PseudoObserver.data
-
-        # record global iterations
-        # I use this to mark the loops where MDC exceeds the specified trigger value
-        global_iterator=0
-
-        number_of_loops = 1000
-
-        for i in range(number_of_loops):
-
-            global_iterator = global_iterator + 1
-            # add empty list to save the new pseudoobserver data
-            myArray = []
-            # Function to modify the PseudoObserver on each loop
-            for row in np.array(pulled_in_the_data):
-
-                if row[2] in PseudoObserver.output:
-                    mean = row[5]
+        for i in range(iterations):
+            counter += 1
+            # add empty list to hold virtual_ecologist estimates
+            ve_estimates = []
+            # loop through the dataset
+            for row in np.array(self.dataset):
+                # match FG from dataset with a key in MSE dictionary
+                if row[1] in self.mse_output: # PseudoObserver.output ===> self.mse_output
+                    # assign cover scores to variable "observer_estimate"
+                    observer_estimate = row[4] # mean is now =====> observer_estimate
 
                     # The MSE is equal to the sum of the variance
                     # convert to SD and draw a random number using cover estimates of observer one
-                    sd = math.sqrt(PseudoObserver.output[row[2]])
-                    CalculatePseudoObserver = np.random.normal(mean, sd)
+                    sd = math.sqrt(self.mse_output[row[1]])
+                    virtual_ecologist = np.random.normal(observer_estimate, sd)
+                    # CalculatePseudoObserver =====> virtual_ecologist
 
-                    # A species can only cover a maximum area of 100%
-                    if CalculatePseudoObserver >= 100:
-                        CalculatePseudoObserver = 100
+                    # maximum cover is 100%
+                    if virtual_ecologist >= 100:
+                        virtual_ecologist = 100
+                    # negative values are missed observations
+                    elif virtual_ecologist <= 0:
+                        virtual_ecologist = 0
 
-                    # if the pseudo observer draws negative value the species is considered missed
-                    elif CalculatePseudoObserver <= 0:
-                        CalculatePseudoObserver = 0
+                    # add to array
+                    ve_estimates.append(virtual_ecologist)
 
-                    myArray.append(CalculatePseudoObserver)
+            # Add column to the DataFrame
+            self.dataset['virtual_ecologist'] = ve_estimates
 
-            # Add the new column into the DataFrame
-            pulled_in_the_data['pseudo_observer'] = myArray
+            # <---- First loop finished which created the observations
+            #       of the virtual ecologist ------>
 
-
-            Data = (pulled_in_the_data[pulled_in_the_data['Wetland'].str.contains(wetland_name)])
-            get_max_transect_length = len(Data['Plot_ID'].unique())
+            # Data =====> temp_data_holder
+            temp_data_holder = (self.dataset[self.dataset['site'].str.contains(site)])
+            find_longest_transect = len(temp_data_holder['plot'].unique())
 
             # get data into the correct format where the data can be evaluated for each unique transect_ID
-            subsets = dict(list(Data.groupby(['Wetland','Transect_ID'])))
-            #print(subsets)
-
+            subset_data = dict(list(temp_data_holder.groupby(['site','transect'])))
+            # subsets =====> subset_data
             # modify this line if you want to retain a minimum number of plots in a transect
-            MinNumberOfPlots = 4
+            #MinNumberOfPlots = 4 ========> min_plot
 
+            # Track of plot reductions
+            # iterator ==============> plot_iterator
+            plot_iterator = 0
 
-            # To keep track of plot reductions
-            iterator = 0
+            for i in range(find_longest_transect):
+                # add empty list to hold plot names in sequential order
+                plotnames_list = [] # MyList ========> plotnames_list
 
+                # subset is data for all transects in the wetland
+                for subset in subset_data:
+                    # item is an integer and used as a slice operator later
+                    # transect length measured by number of plots
+                    transect_length = (len(subset_data[subset]['plot'].unique()) - plot_iterator)
+                    #item ===========> transect_length
 
-
-            for i in range(get_max_transect_length):
-                # This list will hold the plot names in sequential order
-                # so that plot reductions occur deterministically from the end of each transect
-                MyList = []
-
-
-                # Note where subsets has come from above
-                # It is a dictionary containing grouped data according to transect
-                # Such that, subset refers to a grouping of data
-                for subset in subsets:
-                    # item is an integer and used as a slice operator 4lines below in NewData
-                    item = (len(subsets[subset]['Plot_ID'].unique()) - iterator)
-
-                    # conditional statment that checks the minimum plot number
-                    # that is allowed to occur on each transect (remember this is still within
-                    #the dictionary as a 'subset' of data)
-                    if item <= MinNumberOfPlots:
-                        SliceOperator = MinNumberOfPlots
+                    # transect length cannot be less than minimum plot number
+                    if transect_length <= min_plot:
+                        reduce_transect_length = min_plot # SliceOperator ======> reduce_transect_length
                     else:
-                        SliceOperator = item
+                        reduce_transect_length = transect_length
 
-                    # arrange plots in order necessary because dictionaries are not
-                    # ordered data structures
-                    NewData = (subsets[subset]['Plot_ID'])
-                    NewData = sorted((NewData).unique())
-                    NewData = (NewData)[:SliceOperator]
+                    # sort plots in order
+                    # NewData ============> sorted_data
+                    sorted_data = (subset_data[subset]['plot'])
+                    sorted_data = sorted((sorted_data).unique())
+                    sorted_data = (sorted_data)[:reduce_transect_length]
 
-                    # the following for loop adds the plot names to the empty list
-                    # created at the beginning of this process (called: MyList)
-                    for plot_name in NewData:
-                        if plot_name not in MyList:
-                            MyList.append(plot_name)
+                    # add plot names to empty list
+                    for plot_name in sorted_data:
+                        if plot_name not in plotnames_list:
+                            plotnames_list.append(plot_name)
 
-                #print(MyList)
-                #The iterator increments on every loop which decreases the length of the slice operator
-                iterator += 1
+                # increase plot_iterator reduces transect length
+                plot_iterator += 1
 
-                #print(MaximumTransectLength)
-                # From the full dataset pull out the data that matches the list (according to the slice operator)
-                CompiledData = (Data[Data['Plot_ID'].isin(MyList)])
+                # subset data matching the list of plot names
+                reduced_transect = (temp_data_holder[temp_data_holder['plot'].isin(plotnames_list)])
+                # CompiledData =========> reduced_transect
 
-                #-------------------------------------------------------------------------
-                #For each subsect of 'CompiledData' in the previous step, extract/compile
-                # to run a t-test
+                # extract functional group from the data AFTER transects are reduced
+                lifeform_data = (reduced_transect[reduced_transect['lifeform'].str.contains(lifeform)])
+                #pieces ========> lifeform_data
+                lifeform_data = dict(list(lifeform_data.groupby(['site','transect','lifeform'])))
 
-                # pull out the data according to user entry
-                pieces = (CompiledData[CompiledData['FuncGroup'].str.contains(functional_group_name)])
-                pieces = dict(list(pieces.groupby(['Wetland','Transect_ID','FuncGroup'])))
+                # place holder list of lists
+                group_data_array = [] #MyDataArray ========> group_data_array
 
-                #print(pieces)
-
-                MyDataArray = []
                 #loop through each piece of data and calculate the sum
-                for group in pieces:
-                    #print(pieces[group])
-                    # This returns total proportional cover for each functional group along each transect for both observer and pseudo
-                    cover = pieces[group]['Cover'].sum() / len(pieces[group]['Cover'])
-                    pseudo = pieces[group]['pseudo_observer'].sum() / len(pieces[group]['pseudo_observer'])
-                    plot_occupancy = len(pieces[group]['Plot_ID'].unique())
-
-                    # combine data and append the results to MyDataArray
-                    # To recap: the following line concatenates the wetland name, transect id, functional group
-                    # along with the sum of cover and pseudo observer.
-                    # This will occur as many times as the longest transect EXCEPT on each iteration
-                    # it is likely that there will be fewer transects containing species from your chosen functional group
-                    output = (group[0], group[1], group[2], cover, pseudo, plot_occupancy)
-
+                for group in lifeform_data:
+                    # calculate observer estimate
+                    real_observer = lifeform_data[group]['cover'].sum() / len(lifeform_data[group]['cover'])
+                    # calculate virtual_ecologist estimate
+                    virtual_observer = lifeform_data[group]['virtual_ecologist'].sum() / len(lifeform_data[group]['virtual_ecologist'])
+                    # calculate plot_occupancy
+                    plot_occupancy = len(lifeform_data[group]['plot'].unique())
+                    # concatenate data
+                    output = (group[0], group[1], group[2], real_observer, virtual_observer, plot_occupancy)
                     #append the output to the empty list
-                    MyDataArray.append(output)
+                    group_data_array.append(output)
 
                 # convert the list of lists to a Pandas DataFrame
-                result = pd.DataFrame(MyDataArray, columns = list(["Wetland","Transect","FuncGroup","Cover","Pseudo","PlotOccupancy"]))
-                result.sort(['Wetland','Transect','FuncGroup'], ascending = True, inplace=True)
+                result = pd.DataFrame(group_data_array, columns = list(["site","transect","lifeform","cover","virtual","occupancy"]))
+                result.sort(['site','transect','lifeform'], ascending = True, inplace=True)
 
                 # subset the data again to get the required columns for calculating a paired t-test for each functional group in each wetland
-                newsubset = dict(list(result.groupby(['Wetland','FuncGroup'])))
-                #print(newsubset)
+                mmd_subset = dict(list(result.groupby(['site','lifeform'])))
+                # newsubset ======> mmd_subset
 
-
-                # iterate through the new data dictionary called 'newsubset' and calculate dependent t-test (2 tailed)
-                for subset in newsubset:
+                # calculate t-test (2 tailed)
+                for subset in mmd_subset:
 
                     # Calculate minimum detectable difference
-                    A = newsubset[subset]['Cover']
-                    B = newsubset[subset]['Pseudo']
-                    # note that n in the following line refers to transects NOT transect length
-                    # which was calculate in the previous loop.
-                    n= len(newsubset[subset]['Cover'])
-                    # use list comprehension to subtract two lists of equal length
+                    A = mmd_subset[subset]['cover']
+                    B = mmd_subset[subset]['virtual']
+                    number_of_transects = len(mmd_subset[subset]['cover'])
+
+                    # subtract two lists of equal length
                     calculated_difference = [a - b for a, b in zip(A, B)]
+
+                    # Calculate Minimum Detectable Difference <=========== MDD
                     stand_dev = np.array(calculated_difference).std()
-                    MDC = np.sqrt((4) * (stand_dev**2) * (1.96+1.28) / n)
+                    min_detect_change = np.sqrt((4) * (stand_dev**2) * \
+                        (1.96 + 1.28) / number_of_transects) # MDC ========> min_detect_change
 
                     # Determine average plot occupancy across all transects
-                    PO = newsubset[subset]['PlotOccupancy'].sum()
+                    avg_plot_occupancy = mmd_subset[subset]['occupancy'].sum() # PO =====> avg_plot_occupancy
 
-                    # save the information when MDC exceeds the set trigger value
-                    # note this will record ALL iterations not just the first event when the trigger is exceeded
-                    # uncomment the next two lines
-                    if MDC >= int(Trigger_value):
-                        MDC_trigger_breaks = global_iterator,iterator,MDC,PO,n
-                        TriggerValuesArray.append(MDC_trigger_breaks)
-
+                    # record values beyond trigger point
+                    if min_detect_change >= int(trigger):
+                        mdc_trigger_point = counter, plot_iterator, min_detect_change, \
+                            avg_plot_occupancy, number_of_transects
+                        self.trigger_points.append(mdc_trigger_point)
 
                     # append data for plotting
-                    MDC_data = (iterator, subset[0], subset[1], MDC, n, PO)
-                    #print(MDC_data)
-                    MDCarray.append(MDC_data)
+                    mdc_data = (plot_iterator, subset[0], subset[1], min_detect_change, number_of_transects, plot_occupancy)
+                    self.plot_data.append(mdc_data) # MDCarray ==========> self.plot_data
 
                     # calculate paired t-test
-                    test = stats.ttest_rel(newsubset[subset]['Cover'],newsubset[subset]['Pseudo'])
-                    data_str = (iterator, subset[0],subset[1],list(test)[0],round(list(test)[1],3),n)
-                    ResultsArray.append(data_str)
+                    test = stats.ttest_rel(mmd_subset[subset]['cover'], mmd_subset[subset]['virtual'])
+                    data_str = (plot_iterator, subset[0], subset[1], list(test)[0], \
+                        round(list(test)[1], 3), number_of_transects)
+                    self.ttest_results.append(data_str)
 
-
-        # set plotting params
-        font = {'family' : 'normal',
-        'weight' : 'normal',
-        'size'   : 12}
-
-        matplotlib.rc('font', **font)
-        matplotlib.rc(('xtick', 'ytick'), labelsize=14)
-
-        # evaluate p-values
-        PlotDataFrame = pd.DataFrame(ResultsArray, columns = list(["Dropped Plots", "Wetland","Functional Group", "t value", "p value","n"]))
-
-        # extract the x axis data from PlotDataFrame
-        x = list(PlotDataFrame['Dropped Plots'].unique())
-
-        # extract n from PlotDataFrame; note it requires x in previous line
-        # and is used to calculate the standard error
-        n_output = (PlotDataFrame["n"][0:max(x)])
-
-        # extract mean from PlotDataFrame;
-        mean_output=list(PlotDataFrame.groupby('Dropped Plots')['p value'].mean())
-
-        # extract sd from PlotDataFrame; not the division at the end of line - calc stand. error.
-        sd_output=list(PlotDataFrame.groupby('Dropped Plots')['p value'].std())
-        se_output = (sd_output / np.sqrt(n_output))
-
-        # plot the test of p values
-        plt.errorbar(x, mean_output, yerr=se_output)
-        plt.ylim(0,1.1)
-        plt.xlim(0,max(x) + 1)
-        plt.title(wetland_name + ' [' + functional_group_name + ']')
-        plt.ylabel("p value")
-        plt.xlabel("Number of plots that are dropped from each transect")
-        plt.savefig('MC_' +  wetland_name + '_' + functional_group_name + '.png', format='png', dpi=1000)
-        plt.show()
-        #-------------------------------------------------------------------------------------------------------------
+        # T-TEST plotting function stripped from here
+        # --------OUTSIDE OF LAST LOOP------
+        # This could be a NEW FUNCTION
 
         # evaluate MDC-values
-        MDCDataFrame = pd.DataFrame(MDCarray, columns = list(["Dropped Plots", "Wetland","Functional Group", "MDC","n","Plot Occupancy"]))
-        #print(MDCDataFrame)
+        mdc_dataframe = pd.DataFrame(self.plot_data, columns = list(["dropped_plots", \
+            "site", "lifeform", "mdc", "n", "occupancy"]))
+        #MDCDataFrame ======> mdc_dataframe
+        # get trigger level data
+        if self.trigger_points != []:
+            # trigger points
+            trigger_dataframe = pd.DataFrame(self.trigger_points, columns = list(["loop", \
+                "dropped_plots", "mdc", "occupancy", "n"]))
+            # TriggerDataFrame =======> trigger_dataframe
+            # mean min trigger value
+            mean_trigger_point = np.mean(list(trigger_dataframe.groupby('loop')['dropped_plots'].min()))
+            # MeanTriggerPoint =========> mean_trigger_point
+            # mean maximum plot occupancy
+            mean_occupancy = np.mean(list(trigger_dataframe.groupby('loop')['occupancy'].max()))
+            # MeanOccupancy ==========> mean_occupancy
 
-        if TriggerValuesArray != []:
-            # Also get the trigger values and find the average number of dropped plots where the MDC exceeds the specified trigger
-            TriggerDataFrame = pd.DataFrame(TriggerValuesArray, columns = list(["Loop", "Dropped Plots","MDC","Plot Occupancy","n"]))
+            # log to console [UPDATE TO LOG FILE]
+            print("Max number of plots you can drop (if each transect still \
+                has 4 plots) is: {0}".format(round(mean_trigger_point, 2)))
 
-            MeanTriggerPoint = np.mean(list(TriggerDataFrame.groupby('Loop')['Dropped Plots'].min()))
-            MeanOccupancy = np.mean(list(TriggerDataFrame.groupby('Loop')['Plot Occupancy'].max()))
-            print("The max number of plots you can drop (if the transect will still have 4 plots) is: {0}".format(round(MeanTriggerPoint,2)))
-            print("The minimum number of plots that must be occupied with this functional group is: {0}".format(round(MeanOccupancy,2)))
+            print("Min number of plots required for this functional group \
+                is: {0}".format(round(mean_occupancy, 2)))
 
         else:
-            MeanTriggerPoint = 0
+            mean_trigger_point = 0
 
-        # extract the x axis data from PlotDataFrame
-        mdc_x = list(MDCDataFrame['Dropped Plots'].unique())
+        # --------- PLOTTING -----------
+        # set up x axis data
+        mdc_x = list(mdc_dataframe['dropped_plots'].unique())
 
-        # extract n from PlotDataFrame; note it requires x in previous line
-        # and is used to calculate the standard error
-        mdc_n_output = (MDCDataFrame["n"][0:max(mdc_x)])
-        mdc_po_output = (MDCDataFrame["Plot Occupancy"][0:max(mdc_x)])
+        # set up data
+        mdc_n_output = (mdc_dataframe["n"][0:max(mdc_x)])
+        mdc_po_output = (mdc_dataframe["occupancy"][0:max(mdc_x)])
 
-        # extract mean from PlotDataFrame;
-        mdc_mean_output=list(MDCDataFrame.groupby('Dropped Plots')['MDC'].mean())
+        #  mean number of dropped plots;
+        mdc_mean_output = list(mdc_dataframe.groupby('dropped_plots')['mdc'].mean())
 
-        # extract sd from PlotDataFrame; not the division at the end of line - calc stand. error.
-        mdc_sd_output=list(MDCDataFrame.groupby('Dropped Plots')['MDC'].std())
+        # calc stand. error.
+        mdc_sd_output = list(mdc_dataframe.groupby('dropped_plots')['mdc'].std())
         mdc_se_output = ((mdc_sd_output / np.sqrt(mdc_n_output)) * 1.96)  # <= 95% confidence interval
 
         # contruct Y limits which will change for each figure
-        if  max(mdc_po_output)+10 >= max(mdc_mean_output) + max(mdc_se_output):
-            set_y_axis_limits = max(mdc_po_output)+10
+        if  max(mdc_po_output) + 10 >= max(mdc_mean_output) + max(mdc_se_output):
+            set_y_axis_limits = max(mdc_po_output) + 10
         else:
-            set_y_axis_limits = max(mdc_mean_output) +max(mdc_se_output) + 10
+            set_y_axis_limits = max(mdc_mean_output) + max(mdc_se_output) + 10
 
         # plot error bars representing Minimum detectable difference
-        plt.errorbar(mdc_x, mdc_mean_output, yerr=mdc_se_output,color='black',lw=1.5,linestyle='-',label="MDD [95% C.I.]")
+        plt.errorbar(mdc_x, mdc_mean_output, yerr = mdc_se_output, color='black', \
+            lw = 1.5, linestyle = '-', label = "MDD - 95% CI")
+            # 95% confidence interval
 
         # add a horizontal line representing the trigger value
-        plt.plot([0, max(mdc_x)], [int(Trigger_value),int(Trigger_value)],color='grey',lw=2,linestyle=':')
+        plt.plot([0, max(mdc_x)], [int(trigger),int(trigger)], \
+            color = 'grey', lw = 2, linestyle = ':')
 
         # set x and y axis
-        plt.ylim(0,set_y_axis_limits)
-        plt.xlim(0,max(mdc_x)+1)
+        plt.ylim(0, set_y_axis_limits)
+        plt.xlim(0, max(mdc_x) + 1)
 
-        # add a title including the location and the functional group
-        plt.title(wetland_name + ' [' + functional_group_name + ']')
+        # n transects
+        mdc_n_transects = mdc_dataframe["n"][0]
 
-        #add to the figure the number of plots that are occupied by the chosen functional group
-        plt.plot(mdc_x, mdc_po_output, label="Plot Occupancy",color='grey',lw=1,linestyle='--')
+        # title: location [lifeform]
+        plt.title(site + ' [' + lifeform + ' | ' + str(mdc_n_transects) + ' transects')
 
-        # plot the vertical line representing optimal replication
-        plt.plot([MeanTriggerPoint,MeanTriggerPoint],[0,set_y_axis_limits],color='grey',lw=1,linestyle='-')
+        # add number of plots that are occupied
+        plt.plot(mdc_x, mdc_po_output, label = "plot occupancy", \
+            color = 'grey', lw = 1, linestyle = '--')
 
+        # plot a vertical line representing optimal replication
+        plt.plot([mean_trigger_point, mean_trigger_point], [0, set_y_axis_limits], \
+            color = 'grey', lw = 1, linestyle = '-')
 
-        plt.text(MeanTriggerPoint + 0.1, max(mdc_mean_output) + max(mdc_se_output), round(MeanTriggerPoint,2),size=16)
+        # add text for optimal replication
+        if mean_trigger_point != 0:
+            plt.text(mean_trigger_point + 0.1, max(mdc_mean_output) + max(mdc_se_output), \
+                round(mean_trigger_point, 2), size = 16)
 
         # uncomment to add x and y labels
-        #plt.ylabel("Minimum detectable difference (%)",size = 14)
-        #plt.xlabel("Number of plots dropped from each transect",size = 14)
+        plt.ylabel("Minimum detectable difference (%)",size = 14)
+        plt.xlabel("Number of plots dropped from each transect",size = 14)
 
-        plt.savefig('MDD_' +  wetland_name + '_' + functional_group_name + '.png', format='png', dpi=1000)
+        # save figure
+        plt.savefig('MDD_' +  site + '_' + lifeform + '.png', format='png', dpi=1000)
         plt.show()
 
 
-
-
-
-
+#=============================================================================
 
 
         # PRINT FUNCTION
@@ -502,8 +451,56 @@ if __name__ == "__main__":
     #import doctest
     #doctest.testmod()
     test = VirtualEcologist("ve_testdata.csv", "ve_fulldataset.csv")
-    print test.mse_output
+    #print test.mse_output
     test.train_observer()
-    print test.mse_output
+    #print test.mse_output
     test.match_full_dataset()
-    print test.mse_output
+    #print test.mse_output
+    #print ""
+    test.calc_mmd(site = "swamp", lifeform = "tree")
+    #print "plot_data"
+    #print test.plot_data
+    #print "ttest results"
+    #print test.ttest_results
+    #print "trigger_points"
+    #print test.trigger_points
+
+
+
+
+        # TTEST PLOTTING FUNCTION!!!!-------------
+        # set plotting params
+        #font = {'family' : 'normal',
+        #'weight' : 'normal',
+        #'size'   : 12}
+
+        #matplotlib.rc('font', **font)
+        #matplotlib.rc(('xtick', 'ytick'), labelsize=14)
+
+        # evaluate p-values
+        #PlotDataFrame = pd.DataFrame(ResultsArray, columns = list(["Dropped Plots", "Wetland","Functional Group", "t value", "p value","n"]))
+
+        # extract the x axis data from PlotDataFrame
+        #x = list(PlotDataFrame['Dropped Plots'].unique())
+
+        # extract n from PlotDataFrame; note it requires x in previous line
+        # and is used to calculate the standard error
+        #n_output = (PlotDataFrame["n"][0:max(x)])
+
+        # extract mean from PlotDataFrame;
+        #mean_output=list(PlotDataFrame.groupby('Dropped Plots')['p value'].mean())
+
+        # extract sd from PlotDataFrame; not the division at the end of line - calc stand. error.
+        #sd_output=list(PlotDataFrame.groupby('Dropped Plots')['p value'].std())
+        #se_output = (sd_output / np.sqrt(n_output))
+
+        # plot the test of p values
+        #plt.errorbar(x, mean_output, yerr=se_output)
+        #plt.ylim(0,1.1)
+        #plt.xlim(0,max(x) + 1)
+        #plt.title(wetland_name + ' [' + functional_group_name + ']')
+        #plt.ylabel("p value")
+        #plt.xlabel("Number of plots that are dropped from each transect")
+        #plt.savefig('MC_' +  wetland_name + '_' + functional_group_name + '.png', format='png', dpi=1000)
+        #plt.show()
+        #-------------------------------------------------------------------------------------------------------------

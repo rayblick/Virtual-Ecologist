@@ -1,4 +1,4 @@
-Wetland,FuncGroup,Transect_ID,Plot_ID,Cover
+site,lifeform,transect,plot,cover
 swamp,grass,Tran_01,Plot_01,80
 swamp,grass,Tran_01,Plot_01,20
 swamp,grass,Tran_01,Plot_01,16

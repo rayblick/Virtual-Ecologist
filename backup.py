@@ -371,6 +371,9 @@ def bootstrap():
 
         # Add the new column into the DataFrame
         pulled_in_the_data['pseudo_observer'] = myArray
+        
+
+        #-----------------------------------------------------------------
 
 
         Data = (pulled_in_the_data[pulled_in_the_data['Wetland'].str.contains(wetland_name)])
