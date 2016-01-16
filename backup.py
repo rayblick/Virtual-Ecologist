@@ -371,7 +371,7 @@ def bootstrap():
 
         # Add the new column into the DataFrame
         pulled_in_the_data['pseudo_observer'] = myArray
-        
+
 
         #-----------------------------------------------------------------
 
@@ -597,8 +597,7 @@ def bootstrap():
     plt.plot(mdc_x, mdc_po_output, label="Plot Occupancy",color='grey',lw=1,linestyle='--')
 
     # plot the vertical line representing optimal replication
-    plt.plot([MeanTriggerPoint,MeanTriggerPoint],[0,set_y_axis_limits],color='grey',lw=1,linestyle='-')
-
+    plt.plot([MeanTriggerPoint, MeanTriggerPoint],[0,set_y_axis_limits],color='grey',lw=1,linestyle='-')
 
     plt.text(MeanTriggerPoint + 0.1, max(mdc_mean_output) + max(mdc_se_output), round(MeanTriggerPoint,2),size=16)
 
