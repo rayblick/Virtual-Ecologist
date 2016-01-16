@@ -60,6 +60,28 @@ class VirtualEcologist:
         self.dataset = {} # built with match_full_dataset
 
 
+
+#=============================================================================
+
+
+        # PRINT FUNCTION
+        ## Provide an output describing import attributes of the dataset
+        #print("Data loaded successfully. ", "There are {0} functional groups in your data.".format(number_of_groups))
+        #print("\nThe functional groups include:")
+
+        #iteration = 0
+        #t = PrettyTable(['Number','Functional group', 'Count'])
+        #for group in counts:
+        #    iteration += 1
+        #    t.add_row([iteration, group, counts[group]])
+
+        #print(t.get_string(sortby="Number"))
+        #print('')
+
+        #
+
+#==============================================================================
+
     def train_observer(self):
         """
         Returns a dictionary containing Mean Square Error of estimates.
@@ -173,21 +195,35 @@ class VirtualEcologist:
                         self.mse_output[item] = dictionary_value / dictionary_iteration
 
 
-    def calc_mmd(self, site, lifeform, trigger=10, iterations=100, min_plot=4):
+    def calc_mmd(self, site, lifeform, trigger = 10,
+        iterations = 100, min_plot = 4, figure = True):
         """
-        Returns t-test results, plotting data and trigger point data. Takes two
-        arguments site (e.g. shrubswamp) and lifeform (e.g. shrub). Three default
-        values are added, 1) a 10% trigger value, 2) 100 iterations, and 3)
-        a minimum plot reduction to 4 per transect. These can be altered by the
-        user.
+        Returns number of plots to reduce per transect. Takes two
+        arguments; site name (e.g. shrubswamp) and lifeform (e.g. shrub).
+        These arguments must be in the dataset that is being used.
+
+        Three default values are added:
+            1) a 10% trigger value
+            2) 100 iterations
+            3) minimum plot reduction of 4 per transect
+            4) save figure to local directory
+
+        These can be altered by the user.
+        E.g.
+        # increase trigger level
+        test.calc_mmd('forestA', 'tree', trigger = 20)
+
+        # turn off plotting
+        test.calc_mmd('forestB', 'shrub', figure = False)
         """
-        # plotting variables
-        self.ttest_results = [] # ResultsArray =================> ttest_results
-        self.plot_data = [] # MDCarray ===================> self.plot_data
-        self.trigger_points = [] #TriggerValuesArray =====> self.trigger_points
-        #pulled_in_the_data = PseudoObserver.data ========> self.dataset
-        counter = 0             #global_iterator=0   =====> counter = 0
-        #number_of_loops = 1000  =========================> iterations
+        # variables
+        self.ttest_results = [] # holds t-test results
+        self.plot_data = [] # holds plot data
+        self.trigger_points = [] # holders trigger value info for plotting
+        counter = 0  # stores the number of iterations to bootstrap
+        self.trigger = trigger # used for plotting
+        self.site = site    # used for plotting
+        self.lifeform = lifeform # used for plotting
 
         for i in range(iterations):
             counter += 1
@@ -195,16 +231,18 @@ class VirtualEcologist:
             ve_estimates = []
             # loop through the dataset
             for row in np.array(self.dataset):
+
                 # match FG from dataset with a key in MSE dictionary
-                if row[1] in self.mse_output: # PseudoObserver.output ===> self.mse_output
+                if row[1] in self.mse_output:
                     # assign cover scores to variable "observer_estimate"
-                    observer_estimate = row[4] # mean is now =====> observer_estimate
+                    observer_estimate = row[4]
 
                     # The MSE is equal to the sum of the variance
-                    # convert to SD and draw a random number using cover estimates of observer one
+                    # calculate SD and draw a random number that is
+                    # centered on the real observers estimate.
+                    # Assumes a normal distribution of error.
                     sd = math.sqrt(self.mse_output[row[1]])
                     virtual_ecologist = np.random.normal(observer_estimate, sd)
-                    # CalculatePseudoObserver =====> virtual_ecologist
 
                     # maximum cover is 100%
                     if virtual_ecologist >= 100:
@@ -216,45 +254,36 @@ class VirtualEcologist:
                     # add to array
                     ve_estimates.append(virtual_ecologist)
 
-            # Add column to the DataFrame
+            # Add column to the main dataframe
             self.dataset['virtual_ecologist'] = ve_estimates
 
-            # <---- First loop finished which created the observations
-            #       of the virtual ecologist ------>
-
-            # Data =====> temp_data_holder
-            temp_data_holder = (self.dataset[self.dataset['site'].str.contains(site)])
+            # Start process of self.dataset
+            temp_data_holder = (self.dataset[self.dataset['site'].str.contains(self.site)])
             find_longest_transect = len(temp_data_holder['plot'].unique())
 
-            # get data into the correct format where the data can be evaluated for each unique transect_ID
+            # subset data to evaluate each transect
             subset_data = dict(list(temp_data_holder.groupby(['site','transect'])))
-            # subsets =====> subset_data
-            # modify this line if you want to retain a minimum number of plots in a transect
-            #MinNumberOfPlots = 4 ========> min_plot
 
-            # Track of plot reductions
-            # iterator ==============> plot_iterator
+            # Track plot reductions
             plot_iterator = 0
 
             for i in range(find_longest_transect):
-                # add empty list to hold plot names in sequential order
-                plotnames_list = [] # MyList ========> plotnames_list
+                # add place holder list for plot names in sequential order
+                plotnames_list = []
 
                 # subset is data for all transects in the wetland
                 for subset in subset_data:
-                    # item is an integer and used as a slice operator later
-                    # transect length measured by number of plots
+                    # transect length is measured by number of plots
+                    # plot iterator reduces transect length during each loop
                     transect_length = (len(subset_data[subset]['plot'].unique()) - plot_iterator)
-                    #item ===========> transect_length
 
                     # transect length cannot be less than minimum plot number
                     if transect_length <= min_plot:
-                        reduce_transect_length = min_plot # SliceOperator ======> reduce_transect_length
+                        reduce_transect_length = min_plot
                     else:
                         reduce_transect_length = transect_length
 
                     # sort plots in order
-                    # NewData ============> sorted_data
                     sorted_data = (subset_data[subset]['plot'])
                     sorted_data = sorted((sorted_data).unique())
                     sorted_data = (sorted_data)[:reduce_transect_length]
@@ -269,36 +298,41 @@ class VirtualEcologist:
 
                 # subset data matching the list of plot names
                 reduced_transect = (temp_data_holder[temp_data_holder['plot'].isin(plotnames_list)])
-                # CompiledData =========> reduced_transect
 
                 # extract functional group from the data AFTER transects are reduced
-                lifeform_data = (reduced_transect[reduced_transect['lifeform'].str.contains(lifeform)])
-                #pieces ========> lifeform_data
+                lifeform_data = (reduced_transect[reduced_transect['lifeform'].str.contains(self.lifeform)])
                 lifeform_data = dict(list(lifeform_data.groupby(['site','transect','lifeform'])))
 
-                # place holder list of lists
-                group_data_array = [] #MyDataArray ========> group_data_array
+                # place holder for the next for loop
+                group_data_array = []
 
-                #loop through each piece of data and calculate the sum
+                # calculate sums
                 for group in lifeform_data:
                     # calculate observer estimate
-                    real_observer = lifeform_data[group]['cover'].sum() / len(lifeform_data[group]['cover'])
+                    real_observer = lifeform_data[group]['cover'].sum() \
+                        / len(lifeform_data[group]['cover'])
+
                     # calculate virtual_ecologist estimate
-                    virtual_observer = lifeform_data[group]['virtual_ecologist'].sum() / len(lifeform_data[group]['virtual_ecologist'])
+                    virtual_observer = lifeform_data[group]['virtual_ecologist'].sum() \
+                        / len(lifeform_data[group]['virtual_ecologist'])
+
                     # calculate plot_occupancy
                     plot_occupancy = len(lifeform_data[group]['plot'].unique())
+
                     # concatenate data
-                    output = (group[0], group[1], group[2], real_observer, virtual_observer, plot_occupancy)
+                    output = (group[0], group[1], group[2], real_observer, \
+                    virtual_observer, plot_occupancy)
+
                     #append the output to the empty list
                     group_data_array.append(output)
 
                 # convert the list of lists to a Pandas DataFrame
-                result = pd.DataFrame(group_data_array, columns = list(["site","transect","lifeform","cover","virtual","occupancy"]))
-                result.sort(['site','transect','lifeform'], ascending = True, inplace=True)
+                result = pd.DataFrame(group_data_array, columns = list(["site", \
+                "transect", "lifeform", "cover", "virtual", "occupancy"]))
+                result.sort(['site', 'transect', 'lifeform'], ascending = True, inplace = True)
 
-                # subset the data again to get the required columns for calculating a paired t-test for each functional group in each wetland
+                # subset data to calc MMD
                 mmd_subset = dict(list(result.groupby(['site','lifeform'])))
-                # newsubset ======> mmd_subset
 
                 # calculate t-test (2 tailed)
                 for subset in mmd_subset:
@@ -314,59 +348,64 @@ class VirtualEcologist:
                     # Calculate Minimum Detectable Difference <=========== MDD
                     stand_dev = np.array(calculated_difference).std()
                     min_detect_change = np.sqrt((4) * (stand_dev**2) * \
-                        (1.96 + 1.28) / number_of_transects) # MDC ========> min_detect_change
+                        (1.96 + 1.28) / number_of_transects)
 
                     # Determine average plot occupancy across all transects
-                    avg_plot_occupancy = mmd_subset[subset]['occupancy'].sum() # PO =====> avg_plot_occupancy
+                    avg_plot_occupancy = mmd_subset[subset]['occupancy'].sum()
 
                     # record values beyond trigger point
-                    if min_detect_change >= int(trigger):
+                    if min_detect_change >= int(self.trigger):
                         mdc_trigger_point = counter, plot_iterator, min_detect_change, \
-                            avg_plot_occupancy, number_of_transects
+                        avg_plot_occupancy, number_of_transects
                         self.trigger_points.append(mdc_trigger_point)
 
                     # append data for plotting
-                    mdc_data = (plot_iterator, subset[0], subset[1], min_detect_change, number_of_transects, plot_occupancy)
-                    self.plot_data.append(mdc_data) # MDCarray ==========> self.plot_data
+                    mdc_data = (plot_iterator, subset[0], subset[1], min_detect_change, \
+                    number_of_transects, plot_occupancy)
+                    self.plot_data.append(mdc_data)
 
                     # calculate paired t-test
                     test = stats.ttest_rel(mmd_subset[subset]['cover'], mmd_subset[subset]['virtual'])
                     data_str = (plot_iterator, subset[0], subset[1], list(test)[0], \
-                        round(list(test)[1], 3), number_of_transects)
+                    round(list(test)[1], 3), number_of_transects)
                     self.ttest_results.append(data_str)
 
-        # T-TEST plotting function stripped from here
-        # --------OUTSIDE OF LAST LOOP------
-        # This could be a NEW FUNCTION
+        # Plot results
+        if figure == True: self._create_mdd_figure()
 
-        # evaluate MDC-values
+
+    def _create_mdd_figure(self):
+        """
+        Saves a figure in png format for site and lifeform.
+        """
+
+        # import data
         mdc_dataframe = pd.DataFrame(self.plot_data, columns = list(["dropped_plots", \
-            "site", "lifeform", "mdc", "n", "occupancy"]))
-        #MDCDataFrame ======> mdc_dataframe
+        "site", "lifeform", "mdc", "n", "occupancy"]))
+
         # get trigger level data
         if self.trigger_points != []:
             # trigger points
             trigger_dataframe = pd.DataFrame(self.trigger_points, columns = list(["loop", \
-                "dropped_plots", "mdc", "occupancy", "n"]))
-            # TriggerDataFrame =======> trigger_dataframe
-            # mean min trigger value
+            "dropped_plots", "mdc", "occupancy", "n"]))
+            # mean trigger value
+            # min used for list ordering
             mean_trigger_point = np.mean(list(trigger_dataframe.groupby('loop')['dropped_plots'].min()))
-            # MeanTriggerPoint =========> mean_trigger_point
             # mean maximum plot occupancy
+            # max used for list ordering
             mean_occupancy = np.mean(list(trigger_dataframe.groupby('loop')['occupancy'].max()))
-            # MeanOccupancy ==========> mean_occupancy
 
-            # log to console [UPDATE TO LOG FILE]
-            print("Max number of plots you can drop (if each transect still \
-                has 4 plots) is: {0}".format(round(mean_trigger_point, 2)))
+            # log to shell
+            print("Max number of plots you can drop (if each transect still has 4 plots) \
+is: {0}".format(round(mean_trigger_point, 2)))
 
-            print("Min number of plots required for this functional group \
-                is: {0}".format(round(mean_occupancy, 2)))
+            print("The trigger value was exceeded when the minimum number of plots \
+per transect was less than: {0}".format(round(mean_occupancy, 2)))
 
         else:
+            # trigger not reached
             mean_trigger_point = 0
 
-        # --------- PLOTTING -----------
         # set up x axis data
         mdc_x = list(mdc_dataframe['dropped_plots'].unique())
 
@@ -393,7 +432,7 @@ class VirtualEcologist:
             # 95% confidence interval
 
         # add a horizontal line representing the trigger value
-        plt.plot([0, max(mdc_x)], [int(trigger),int(trigger)], \
+        plt.plot([0, max(mdc_x)], [int(self.trigger),int(self.trigger)], \
             color = 'grey', lw = 2, linestyle = ':')
 
         # set x and y axis
@@ -404,7 +443,7 @@ class VirtualEcologist:
         mdc_n_transects = mdc_dataframe["n"][0]
 
         # title: location [lifeform]
-        plt.title(site + ' [' + lifeform + ' | ' + str(mdc_n_transects) + ' transects')
+        plt.title(self.site + ' [' + self.lifeform + ' | ' + str(mdc_n_transects) + ' transects]')
 
         # add number of plots that are occupied
         plt.plot(mdc_x, mdc_po_output, label = "plot occupancy", \
@@ -424,83 +463,15 @@ class VirtualEcologist:
         plt.xlabel("Number of plots dropped from each transect",size = 14)
 
         # save figure
-        plt.savefig('MDD_' +  site + '_' + lifeform + '.png', format='png', dpi=1000)
-        plt.show()
+        plt.savefig('MDD_' +  self.site + '_' + self.lifeform + '.png', format='png', dpi=1000)
+        #plt.show()
 
 
-#=============================================================================
-
-
-        # PRINT FUNCTION
-        ## Provide an output describing import attributes of the dataset
-        #print("Data loaded successfully. ", "There are {0} functional groups in your data.".format(number_of_groups))
-        #print("\nThe functional groups include:")
-
-        #iteration = 0
-        #t = PrettyTable(['Number','Functional group', 'Count'])
-        #for group in counts:
-        #    iteration += 1
-        #    t.add_row([iteration, group, counts[group]])
-
-        #print(t.get_string(sortby="Number"))
-        #print('')
-
-        #
 
 if __name__ == "__main__":
     #import doctest
     #doctest.testmod()
     test = VirtualEcologist("ve_testdata.csv", "ve_fulldataset.csv")
-    #print test.mse_output
     test.train_observer()
-    #print test.mse_output
     test.match_full_dataset()
-    #print test.mse_output
-    #print ""
     test.calc_mmd(site = "swamp", lifeform = "tree")
-    #print "plot_data"
-    #print test.plot_data
-    #print "ttest results"
-    #print test.ttest_results
-    #print "trigger_points"
-    #print test.trigger_points
-
-
-
-
-        # TTEST PLOTTING FUNCTION!!!!-------------
-        # set plotting params
-        #font = {'family' : 'normal',
-        #'weight' : 'normal',
-        #'size'   : 12}
-
-        #matplotlib.rc('font', **font)
-        #matplotlib.rc(('xtick', 'ytick'), labelsize=14)
-
-        # evaluate p-values
-        #PlotDataFrame = pd.DataFrame(ResultsArray, columns = list(["Dropped Plots", "Wetland","Functional Group", "t value", "p value","n"]))
-
-        # extract the x axis data from PlotDataFrame
-        #x = list(PlotDataFrame['Dropped Plots'].unique())
-
-        # extract n from PlotDataFrame; note it requires x in previous line
-        # and is used to calculate the standard error
-        #n_output = (PlotDataFrame["n"][0:max(x)])
-
-        # extract mean from PlotDataFrame;
-        #mean_output=list(PlotDataFrame.groupby('Dropped Plots')['p value'].mean())
-
-        # extract sd from PlotDataFrame; not the division at the end of line - calc stand. error.
-        #sd_output=list(PlotDataFrame.groupby('Dropped Plots')['p value'].std())
-        #se_output = (sd_output / np.sqrt(n_output))
-
-        # plot the test of p values
-        #plt.errorbar(x, mean_output, yerr=se_output)
-        #plt.ylim(0,1.1)
-        #plt.xlim(0,max(x) + 1)
-        #plt.title(wetland_name + ' [' + functional_group_name + ']')
-        #plt.ylabel("p value")
-        #plt.xlabel("Number of plots that are dropped from each transect")
-        #plt.savefig('MC_' +  wetland_name + '_' + functional_group_name + '.png', format='png', dpi=1000)
-        #plt.show()
-        #-------------------------------------------------------------------------------------------------------------
