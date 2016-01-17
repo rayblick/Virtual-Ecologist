@@ -48,7 +48,7 @@ import math
 from scipy import stats
 import matplotlib.pyplot as plt
 from prettytable import PrettyTable
-from itertools import cycle, islice
+#from itertools import cycle, islice
 import re
 
 class VirtualEcologist:
@@ -58,8 +58,19 @@ class VirtualEcologist:
     def __init__(self, pilot_data, full_data):
         self.pilot_data = pilot_data # input file 1
         self.full_data = full_data # input file 2
-        self.mse_output = {} # will hold MSE according to pilot_data and full_data
+        self.mse_output = {} # will hold MSE from pilot_data and full_data
         self.dataset = {} # Makes the full dataset available in the workspace
+
+        # train_observer function
+        self.fg_dict = {} # store count of functional groups (train_observer)
+
+        # calc_mmd function
+        self.ttest_results = [] # holds t-test results
+        self.plot_data = [] # holds plot data
+        self.trigger_points = [] # holders trigger value info for plotting
+        self.trigger = None # used for plotting
+        self.site = None    # used for plotting
+        self.lifeform = None # used for plotting
 
 
     def print_table(self, data_dictionary):
@@ -80,7 +91,8 @@ class VirtualEcologist:
             # increase ID counter
             iteration += 1
             # add each row to be printed
-            t.add_row([iteration, group, round(data_dictionary[group], 3), pilot_data])
+            t.add_row([iteration, group, round(data_dictionary[group], 3),\
+             pilot_data])
         # print to console
         print t.get_string(sortby="ID")
 
@@ -107,9 +119,6 @@ class VirtualEcologist:
         ...
         TypeError: coercing to Unicode: need string or buffer, int found
         """
-        # store count of functional groups
-        self.fg_dict = dict()
-
         with open(self.pilot_data, 'r') as f:
             file_reader = csv.reader(f)
             for row in file_reader:
@@ -126,7 +135,7 @@ class VirtualEcologist:
                     self.fg_dict[fg_key] += 1
 
                 # Calculate square difference between observers
-                square_difference = (float(est_one) - float(est_two))**2
+                square_difference = (float(est_one) - float(est_two)) ** 2
 
                 # add to global dictionary
                 self.mse_output[fg_key] = self.mse_output.get(fg_key, 0) + square_difference
@@ -143,9 +152,10 @@ class VirtualEcologist:
 
     def match_full_dataset(self):
         """
-        Updates the dictionary of Mean Square Error rates. If all functional
-        groups (FG) are missing, each FG is assigned 10%. If only some FG's
-        are missing, each FG is assigned a mean value based on the pilot data.
+        Updates the dictionary of Mean Square Error rates. If no pilot data
+        is used, each lifeform is assigned an error of 10%. For lifeforms not
+        in pilot data, each new lifeform is assigned a mean value based
+        on the pilot data.
         """
         # local count dictionary
         count_dict = dict()
@@ -172,7 +182,7 @@ class VirtualEcologist:
 
         # Update MSE values for untrained functional groups
         if list_of_groups == []:
-            print("All functional groups have been trained.")
+            print "All functional groups have been trained."
         else:
             # calculate average MSE across functional groups
             dictionary_value = 0
@@ -203,11 +213,11 @@ class VirtualEcologist:
         Returns a bar chart for lifeforms across all sites.
         """
         # place holder list
-        sites = [] # wetland =====> sites
+        sites = []
 
         # seperate lifeforms by comma
         if lifeforms != None:
-            dropped_groups = lifeforms.split(',') #
+            dropped_groups = lifeforms.split(',')
         else:
             # give an empty list
             dropped_groups = []
@@ -245,7 +255,8 @@ class VirtualEcologist:
         percentiles = df_data.apply(lambda c: c / c.sum() * 100, axis=1)
 
         # specify colours
-        my_colors = ['DarkKhaki','Khaki','PaleGoldenrod','LightGoldenrodYellow','white','grey','darkgrey']
+        my_colors = ['DarkKhaki', 'Khaki', 'PaleGoldenrod', \
+        'LightGoldenrodYellow', 'white', 'grey', 'darkgrey']
 
         # plot barchart
         ax = percentiles.plot(kind='bar', stacked=True, color=my_colors, ylim=(0,100))
@@ -264,12 +275,13 @@ class VirtualEcologist:
 
         # save the figure
         fig.savefig('lifeforms_barchart.png', format='png', dpi=1000)
-
+        plt.close(fig)
 
     def create_pdf_figure(self):
         """
         Prints a table containing the group name and sigma that
-        will define the PseudoObserver model
+        will define the PseudoObserver model. Returns nothing if
+        match_full_dataset() has not been instantiated.
         """
         # loop through populated data dictionary
         for group in self.mse_output:
@@ -292,7 +304,7 @@ class VirtualEcologist:
             plt.xlim((0,100))
             plt.ylabel("Probability of cover estimate", size=14)
             plt.xlabel("Percentage cover estimate for a single species (0-100)", size=14)
-            plt.plot([50, 50], [0, 0.1], 'Grey', lw=2, linestyle = '--')
+            plt.plot([50, 50], [0, 0.1], 'Grey', lw=2, linestyle='--')
 
             # set figure name and save
             name = group
@@ -323,11 +335,9 @@ class VirtualEcologist:
         # turn off plotting
         test.calc_mmd('forestB', 'shrub', figure = False)
         """
-        # variables
-        self.ttest_results = [] # holds t-test results
-        self.plot_data = [] # holds plot data
-        self.trigger_points = [] # holders trigger value info for plotting
         counter = 0  # stores the number of iterations to bootstrap
+
+        # variables
         self.trigger = trigger # used for plotting
         self.site = site    # used for plotting
         self.lifeform = lifeform # used for plotting
@@ -583,6 +593,6 @@ if __name__ == "__main__":
     test.train_observer()
     test.match_full_dataset()
     test.print_table(test.mse_output)
-    #test.calc_mmd(site="swamp", lifeform="herb")
-    #test.create_barchart()
-    #test.create_pdf_figure()
+    test.calc_mmd(site="swamp", lifeform="shrub")
+    test.create_barchart()
+    test.create_pdf_figure()
