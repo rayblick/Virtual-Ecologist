@@ -1,5 +1,5 @@
 """
-Virtual-Ecologist
+VirtualEcologist
 
 This module evaluates plant survey data collected in plots along a transect.
 First the error rate that is expected between two people is evaluated for
@@ -25,7 +25,7 @@ detectable difference as plots are reduced from each transect.
 --- The virtual ecologist ---
 File one is used to train the virtual ecologist. If no training data is
 available you can skip the initial stage and accept an error rate between
-participants of 10% (One standard deviation).
+participants of 10% (for one standard deviation).
 
 --- The functional groups ---
 If you have pilot data for one functional group, you can assign the same error
@@ -36,7 +36,7 @@ all of them are represented in the full dataset, the ones without data are
 assigned the average value of the error rate of all other groups.
 
 Created on Thu Mar 19 12:30:56 2015
-Last updated Fri Jan 15 2016
+Last updated Sun Jan 17 2016
 Author: Ray Blick
 """
 
@@ -589,7 +589,7 @@ per transect was less than: {0}".format(round(mean_occupancy, 2)))
 if __name__ == "__main__":
     #import doctest
     #doctest.testmod()
-    test = VirtualEcologist("ve_testdata.csv", "ve_fulldataset.csv")
+    test = VirtualEcologist("example/pilotdata.csv", "example/fulldata.csv")
     test.train_observer()
     test.match_full_dataset()
     test.print_table(test.mse_output)
