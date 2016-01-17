@@ -1,0 +1,9 @@
+setup.py
+tests/__init__.py
+virtualecologist/__init__.py
+virtualecologist/virtualecologist.py
+virtualecologist.egg-info/PKG-INFO
+virtualecologist.egg-info/SOURCES.txt
+virtualecologist.egg-info/dependency_links.txt
+virtualecologist.egg-info/requires.txt
+virtualecologist.egg-info/top_level.txt
