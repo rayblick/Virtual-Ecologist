@@ -280,7 +280,7 @@ class VirtualEcologist:
     def create_pdf_figure(self):
         """
         Prints a table containing the group name and sigma that
-        will define the PseudoObserver model. Returns nothing if
+        will define the VirtualEcologist model. Returns nothing if
         match_full_dataset() has not been instantiated.
         """
         # loop through populated data dictionary
