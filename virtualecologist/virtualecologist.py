@@ -589,7 +589,7 @@ per transect was less than: {0}".format(round(mean_occupancy, 2)))
 if __name__ == "__main__":
     #import doctest
     #doctest.testmod()
-    test = VirtualEcologist("example/pilotdata.csv", "example/fulldata.csv")
+    test = VirtualEcologist("virtualecologist/data/pilotdata.csv", "virtualecologist/data/fulldata.csv")
     test.train_observer()
     test.match_full_dataset()
     test.print_table(test.mse_output)

@@ -13,14 +13,16 @@ setup(
     install_requires = ["csv", "pandas", "numpy",\
     "scipy", "matplotlib", "prettytable"],
 
+    include_package_data = True,
+
     package_data = {
         # include *.txt or *.rst files:
         '': ['*.txt', '*.rst'],
         # include *.msg files:
         '': ['*.msg'],
         # include subdirectory containing example datasets:
-        'virtualecologist': ['data/*.csv']}
-    },
+        'virtualecologist': ['data/*.csv'],
+        },
 
     # metadata for PyPi
     author = "Ray",

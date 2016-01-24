@@ -1,5 +1,8 @@
+CHANGES.txt
+MANIFEST.in
+README.md
 setup.py
-tests/__init__.py
+docs/background.md
 virtualecologist/__init__.py
 virtualecologist/virtualecologist.py
 virtualecologist.egg-info/PKG-INFO
@@ -7,3 +10,5 @@ virtualecologist.egg-info/SOURCES.txt
 virtualecologist.egg-info/dependency_links.txt
 virtualecologist.egg-info/requires.txt
 virtualecologist.egg-info/top_level.txt
+virtualecologist/data/fulldata.csv
+virtualecologist/data/pilotdata.csv

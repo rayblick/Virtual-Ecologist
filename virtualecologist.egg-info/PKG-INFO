@@ -1,7 +1,7 @@
 Metadata-Version: 1.0
 Name: virtualecologist
-Version: 0.0.1
-Summary: Rationalise transect length in ecological surveys. Quantifyyour error rate between surveys, or with a collegue, to determinethe optimal transect length in an ecological monitoring programme.
+Version: 0.0.2
+Summary: Optimize transect length in ecological surveys.
 Home-page: #
 Author: Ray
 Author-email: rblick.ecol@gmail.com
