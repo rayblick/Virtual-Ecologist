@@ -57,15 +57,17 @@ Example
 
 ###Sampling design
 --------------
-Location: single wetland
-Target habitat: hydrological gradient
-Design: stratified-random transects (of variable length)
-Sampling: 1m plots every 4m
-Lifeform: damp tolerant terrestrial plants (Tda)
+Location: single wetland  
+Target habitat: hydrological gradient  
+Design: stratified-random transects (of variable length)  
+Sampling: 1m plots every 4m  
+Lifeform: damp tolerant terrestrial plants (Tda)    
 
 **Thresholds:**   
-    + Minimum detectable difference of 10%
-    + All transects have to keep at least 4 plots each
+
+    + Minimum detectable difference of 10%  
+    + All transects have to keep at least 4 plots each  
+
 
 ![wc](https://raw.github.com/rayblick/Virtual-Ecologist/master/img/transects2014.jpg)
 
@@ -108,23 +110,24 @@ wc.print_table(wc.mse_output)
 ###Calculate minimum detectable difference
 --------------
 ```python
-wc.calc_mmd(site="West Carne", lifeform="Tdr")
+wc.calc_mmd(site="West Carne", lifeform="Tda")
 
 # console printout
-#>>> Max number of plots you can drop (if each transect still has 4 plots) is: 2.0
-#>>> The trigger value was exceeded when the minimum number of plots per transect was less than: 16.4
+#>>> Max number of plots you can drop (if each transect still has 4 plots) is: 1.57
+#>>> The trigger value was exceeded when the minimum number of plots per transect was less than: 17.0
+
 ```
-The console print out summarizes the figure. In this example I can remove 2 plots
+The console print out summarizes the figure. In this example I can remove 1.57 plots
 from each transect before the minimum detectable difference exceeds 10%. Importantly,
-these results are associated with finding a minimum of 16.4 plots with at least
-one species from the target group (Tdr).
+these results are associated with finding a minimum of 17 plots with at least
+one species from the target group (Tda).
 
 Note the dashed line in the figure which shows the number of plots with at least one species
 from Tdr. Unsurprisingly, as I reduce plots from each transect, the minimum
 detectable difference between my observations and the Virtual Ecologist increases
 (and so does variability).
 
-![mmd](https://raw.github.com/rayblick/Virtual-Ecologist/master/img/mmd.png)
+![mmd](https://raw.github.com/rayblick/Virtual-Ecologist/master/img/mdd.png)
 
 
 ###Produce probability density function
