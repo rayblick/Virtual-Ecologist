@@ -18,7 +18,10 @@ individual location. For example, lifeforms (forbs, trees) in a remnant forest.
 Installation
 =========
 ```bash
-pip install virtualecologist
+# clone repo
+https://github.com/rayblick/Virtual-Ecologist.git
+# cd in to root directory
+python setup.py install
 ```
 
 Usage
