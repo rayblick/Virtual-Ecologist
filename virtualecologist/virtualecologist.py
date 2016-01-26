@@ -55,7 +55,7 @@ class VirtualEcologist:
     """
     A class of methods to reduce the number of plots along transect lines.
     """
-    def __init__(self, pilot_data, full_data):
+    def __init__(self, pilot_data=None, full_data):
         self.pilot_data = pilot_data # input file 1
         self.full_data = full_data # input file 2
         self.mse_output = {} # will hold MSE from pilot_data and full_data
