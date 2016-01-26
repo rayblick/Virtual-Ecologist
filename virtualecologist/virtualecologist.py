@@ -601,4 +601,4 @@ if __name__ == "__main__":
     test.print_table(test.mse_output)
     test.calc_mmd(site="West Carne", lifeform="Tda")
     #test.create_barchart()
-    #test.create_pdf_figure()
+    test.create_pdf_figure()
