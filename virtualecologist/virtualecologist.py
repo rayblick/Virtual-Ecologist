@@ -350,15 +350,16 @@ class VirtualEcologist:
             for row in np.array(self.dataset):
 
                 # match FG from dataset with a key in MSE dictionary
-                if row[1] in self.mse_output:
+                if row[2] in self.mse_output:
                     # assign cover scores to variable "observer_estimate"
-                    observer_estimate = row[4]
+                    observer_estimate = row[5]
 
                     # The MSE is equal to the sum of the variance
                     # calculate SD and draw a random number that is
                     # centered on the real observers estimate.
                     # Assumes a normal distribution of error.
-                    sd = math.sqrt(self.mse_output[row[1]])
+                    sd = math.sqrt(self.mse_output[row[2]])
+
                     virtual_ecologist = np.random.normal(observer_estimate, sd)
 
                     # maximum cover is 100%
@@ -383,6 +384,7 @@ class VirtualEcologist:
 
             # Track plot reductions
             plot_iterator = 0
+
 
             for i in range(find_longest_transect):
                 # add place holder list for plot names in sequential order
@@ -423,6 +425,7 @@ class VirtualEcologist:
                 # place holder for the next for loop
                 group_data_array = []
 
+
                 # calculate sums
                 for group in lifeform_data:
                     # calculate observer estimate
@@ -433,7 +436,7 @@ class VirtualEcologist:
                     virtual_observer = lifeform_data[group]['virtual_ecologist'].sum() \
                         / len(lifeform_data[group]['virtual_ecologist'])
 
-                    # calculate plot_occupancy
+                    # calculate plot_occupancy for each transect
                     plot_occupancy = len(lifeform_data[group]['plot'].unique())
 
                     # concatenate data
@@ -451,8 +454,10 @@ class VirtualEcologist:
                 # subset data to calc MMD
                 mmd_subset = dict(list(result.groupby(['site', 'lifeform'])))
 
+
                 # calculate t-test (2 tailed)
                 for subset in mmd_subset:
+
 
                     # Calculate minimum detectable difference
                     A = mmd_subset[subset]['cover']
@@ -468,12 +473,13 @@ class VirtualEcologist:
                         (1.96 + 1.28) / number_of_transects)
 
                     # Determine average plot occupancy across all transects
-                    avg_plot_occupancy = mmd_subset[subset]['occupancy'].sum()
+                    plot_occupancy = mmd_subset[subset]['occupancy'].sum()
+
 
                     # record values beyond trigger point
                     if min_detect_change >= int(self.trigger):
                         mdc_trigger_point = counter, plot_iterator, min_detect_change, \
-                        avg_plot_occupancy, number_of_transects
+                        plot_occupancy, number_of_transects
                         self.trigger_points.append(mdc_trigger_point)
 
                     # append data for plotting
@@ -589,10 +595,10 @@ per transect was less than: {0}".format(round(mean_occupancy, 2)))
 if __name__ == "__main__":
     #import doctest
     #doctest.testmod()
-    test = VirtualEcologist("virtualecologist/data/pilotdata.csv", "virtualecologist/data/fulldata.csv")
+    test = VirtualEcologist("/home/ray/python/scripts/VE/data/TrainingData.csv", "/home/ray/python/scripts/VE/data/NP2014_vegdata.csv")
     test.train_observer()
     test.match_full_dataset()
     test.print_table(test.mse_output)
-    test.calc_mmd(site="swamp", lifeform="shrub")
-    test.create_barchart()
-    test.create_pdf_figure()
+    test.calc_mmd(site="West Carne", lifeform="Tda")
+    #test.create_barchart()
+    #test.create_pdf_figure()

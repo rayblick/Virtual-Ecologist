@@ -372,6 +372,8 @@ class VirtualEcologist:
                     ve_estimates.append(virtual_ecologist)
 
             # Add column to the main dataframe
+            print len(self.dataset)
+            print len(ve_estimates)
             self.dataset['virtual_ecologist'] = ve_estimates
 
             # Start process of self.dataset

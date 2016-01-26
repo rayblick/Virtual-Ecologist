@@ -16,7 +16,7 @@ individual location. For example, lifeforms (forbs, trees) in a remnant forest.
 
 
 Installation
-=========
+-----------
 ```bash
 # clone repo
 https://github.com/rayblick/Virtual-Ecologist.git
@@ -25,7 +25,7 @@ python setup.py install
 ```
 
 Usage
-=========
+------------
 
 ```python
 # Import library
@@ -51,3 +51,86 @@ example.create_barchart()
 # get the probability density function for your selected lifeform
 example.create_pdf_figure()
 ```
+
+Example
+==============
+
+###Sampling design
+--------------
+Location: single wetland
+Target habitat: hydrological gradient
+Design: stratified-random transects (of variable length)
+Sampling: 1m plots every 4m
+Lifeform: damp tolerant terrestrial plants (Tda)
+
+**Thresholds:**   
+    + Minimum detectable difference of 10%
+    + All transects have to keep at least 4 plots each
+
+![wc](https://raw.github.com/rayblick/Virtual-Ecologist/master/img/transects2014.jpg)
+
+
+###Get started
+-------------
+```python
+from virtualecologist import virtualecologist as ve
+wc = ve.VirtualEcolgist("path/to/pilotdata.csv","path/to/fulldata.csv")
+```
+
+###Train your Virtual Ecolgist:
+-------------
+```python
+wc.train_observer()
+# find all cases that are not trained
+wc.match_full_dataset()
+# print mean square error for each life form
+wc.print_table(wc.mse_output)
+```
+
+**Tabulated output:**
+-------------
+```markdown
++----+----------+---------+------------+
+| ID | Lifeform |   MSE   | Pilot data |
++----+----------+---------+------------+
+| 1  |   ARp    |  22.333 |    yes     |
+| 2  |   ATe    | 315.452 |    yes     |
+| 3  |   ATl    |  27.273 |    yes     |
+| 4  |   ATw    |  306.5  |    yes     |
+| 5  |   Ate    | 152.412 |     no     |
+| 6  |  T/ATe   | 152.412 |     no     |
+| 7  |    T     |  49.021 |    yes     |
+| 8  |   Tdr    | 292.731 |    yes     |
+| 9  |   Tda    |  53.576 |    yes     |
++----+----------+---------+------------+
+```
+
+###Calculate minimum detectable difference
+--------------
+```python
+wc.calc_mmd(site="West Carne", lifeform="Tdr")
+
+# console printout
+#>>> Max number of plots you can drop (if each transect still has 4 plots) is: 2.0
+#>>> The trigger value was exceeded when the minimum number of plots per transect was less than: 16.4
+```
+The console print out summarizes the figure. In this example I can remove 2 plots
+from each transect before the minimum detectable difference exceeds 10%. Importantly,
+these results are associated with finding a minimum of 16.4 plots with at least
+one species from the target group (Tdr).
+
+Note the dashed line in the figure which shows the number of plots with at least one species
+from Tdr. Unsurprisingly, as I reduce plots from each transect, the minimum
+detectable difference between my observations and the Virtual Ecologist increases
+(and so does variability).
+
+![mmd](https://raw.github.com/rayblick/Virtual-Ecologist/master/img/mmd.png)
+
+
+###Produce probability density function
+--------------
+```python
+# This will produce one figure for each group of plants
+wc.create_pdf_figure()
+```
+![pdf](https://raw.github.com/rayblick/Virtual-Ecologist/master/img/pdf.png)
