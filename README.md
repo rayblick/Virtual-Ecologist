@@ -31,9 +31,9 @@ Usage
 # Import library
 from virtualecologist import virtualecologist as ve
 # instantiate virtualecologist
-# only requires the main dataset. You must specify pilot data if it is given
-example = VirtualEcologist(pilot_data="virtualecologist/data/pilotdata.csv",
-                                    "virtualecologist/data/fulldata.csv")
+# requires 2 datasets...
+example = ve.VirtualEcologist("virtualecologist/data/pilotdata.csv",
+                              "virtualecologist/data/fulldata.csv")
 # uses pilot data to generate mean error rate
 example.train_observer()
 # match main data to the mean error rate

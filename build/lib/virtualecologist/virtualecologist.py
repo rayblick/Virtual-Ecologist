@@ -55,7 +55,7 @@ class VirtualEcologist:
     """
     A class of methods to reduce the number of plots along transect lines.
     """
-    def __init__(self, pilot_data, full_data):
+    def __init__(self, pilot_data=None, full_data):
         self.pilot_data = pilot_data # input file 1
         self.full_data = full_data # input file 2
         self.mse_output = {} # will hold MSE from pilot_data and full_data
@@ -280,7 +280,7 @@ class VirtualEcologist:
     def create_pdf_figure(self):
         """
         Prints a table containing the group name and sigma that
-        will define the PseudoObserver model. Returns nothing if
+        will define the VirtualEcologist model. Returns nothing if
         match_full_dataset() has not been instantiated.
         """
         # loop through populated data dictionary
@@ -589,7 +589,7 @@ per transect was less than: {0}".format(round(mean_occupancy, 2)))
 if __name__ == "__main__":
     #import doctest
     #doctest.testmod()
-    test = VirtualEcologist("example/pilotdata.csv", "example/fulldata.csv")
+    test = VirtualEcologist("virtualecologist/data/pilotdata.csv", "virtualecologist/data/fulldata.csv")
     test.train_observer()
     test.match_full_dataset()
     test.print_table(test.mse_output)
