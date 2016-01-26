@@ -1,2 +1,2 @@
 v0.0.1, 20160120, initial release
-v0.0.2, 20150124, updated file structure 
+v0.0.2, 20150124, updated file structure and edited README

@@ -30,6 +30,4 @@ setup(
     license = "PSF",
     keywords = "ecology model virtual ecologist",
     url = "#",   # project home page, if any
-
-    # could also include long_description, download_url, classifiers, etc.
 )
